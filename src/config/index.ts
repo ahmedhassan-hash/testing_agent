@@ -8,9 +8,6 @@ export const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY!,
   supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
 
-  // OpenAI (for LangChain)
-  openaiApiKey: process.env.OPENAI_API_KEY,
-
   // Test configuration
   testUserPrefix: "test_agent_",
   testEmailDomain: "test.workmate.local",

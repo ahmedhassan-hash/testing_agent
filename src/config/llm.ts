@@ -1,5 +1,5 @@
-import OpenAI from "openai";
 import dotenv from "dotenv";
+import OpenAI from "openai";
 
 dotenv.config();
 
@@ -11,7 +11,6 @@ if (!openRouterApiKey) {
   );
 }
 
-// OpenRouter client using OpenAI SDK
 export const llm = openRouterApiKey
   ? new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
@@ -23,8 +22,8 @@ export const llm = openRouterApiKey
     })
   : null;
 
-// Free model from OpenRouter
-export const DEFAULT_MODEL = "openai/gpt-oss-120b:free";
+export const DEFAULT_MODEL = "openai/gpt-4o-mini";
+// export const DEFAULT_MODEL = "google/gemini-2.0-flash-exp:free";
 
 /**
  * Simple chat completion helper
@@ -79,7 +78,6 @@ Which action should be taken next? Respond with just the action name.`;
     temperature: 0.3,
   });
 
-  // Find the matching option
   const normalized = response.toLowerCase().trim();
   const match = options.find(
     (o) =>
@@ -100,7 +98,7 @@ export async function generateTestData(
     job: `Generate a realistic home service job posting. Return JSON with:
 - title: string (e.g., "Fix leaking kitchen tap")
 - category: one of [Plumbing, Electrical, Carpentry, Painting, Landscaping, Cleaning, General Repairs, Roofing]
-- description: string (2-3 sentences)
+- description: string (6-9 sentences)
 - budget: number (100-1000 AUD)
 
 Return ONLY valid JSON, no markdown.`,
@@ -112,7 +110,7 @@ Return ONLY valid JSON, no markdown.`,
 Return ONLY valid JSON, no markdown.`,
 
     message: `Generate a realistic message from a tradesperson applying for a home repair job. Return JSON with:
-- message: string (2-3 sentences, professional)
+- message: string (6-9 sentences, professional)
 - estimatedCost: number (150-800 AUD)
 
 Return ONLY valid JSON, no markdown.`,

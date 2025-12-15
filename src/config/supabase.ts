@@ -19,8 +19,6 @@ if (!supabaseAnonKey) {
   throw new Error("Missing SUPABASE_ANON_KEY environment variable");
 }
 
-// Admin client with service role key (bypasses RLS)
-// Used for creating/managing test users and cleanup
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
@@ -28,7 +26,6 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   },
 });
 
-// Create a client for a specific user session
 export function createUserClient(accessToken: string): SupabaseClient {
   return createClient(supabaseUrl!, supabaseAnonKey!, {
     global: {
@@ -39,7 +36,6 @@ export function createUserClient(accessToken: string): SupabaseClient {
   });
 }
 
-// Get anon client (for auth operations)
 export const supabaseAnon = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -47,4 +43,4 @@ export const supabaseAnon = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-export { supabaseUrl, supabaseAnonKey };
+export { supabaseAnonKey, supabaseUrl };
