@@ -1,0 +1,88 @@
+# ------------------------------
+# Node dependencies
+# ------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------
+# Environment variables
+# ------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------
+# Build output
+# ------------------------------
+dist/
+build/
+out/
+coverage/
+
+# ------------------------------
+# Logs
+# ------------------------------
+logs/
+*.log
+
+# ------------------------------
+# Runtime data
+# ------------------------------
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ------------------------------
+# Cache & temp files
+# ------------------------------
+.cache/
+.tmp/
+.temp/
+.eslintcache
+
+# ------------------------------
+# OS files
+# ------------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------------
+# IDE / Editor files
+# ------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ------------------------------
+# Testing
+# ------------------------------
+coverage/
+.nyc_output/
+
+# ------------------------------
+# Optional: Framework specific
+# ------------------------------
+# Next.js
+.next/
+
+# Nuxt
+.nuxt/
+
+# Gatsby
+.cache/
+public/
+
+# ------------------------------
+# TypeScript
+# ------------------------------
+*.tsbuildinfo
+
+# ------------------------------
+# Docker
+# ------------------------------
+docker-compose.override.yml
