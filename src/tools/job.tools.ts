@@ -75,6 +75,7 @@ export async function createJob(
 
 /**
  * Gets matching jobs for a tradesperson
+ * Uses direct table query since get_matching_jobs_with_metrics RPC may not exist
  */
 export async function getMatchingJobs(
   user: TestUser,
@@ -90,11 +91,28 @@ export async function getMatchingJobs(
 
   const client = createUserClient(user.sessionToken);
 
-  const { data: jobs, error } = await client.rpc("get_matching_jobs_with_metrics", {
-    p_profile_id: user.profileId,
-    p_page: 1,
-    p_limit: limit,
-  });
+  // Direct query to jobs table - get open jobs not posted by this user
+  const { data: jobs, error } = await client
+    .from("jobs")
+    .select(`
+      id,
+      job_title,
+      category,
+      description,
+      budget,
+      status,
+      preferred_date,
+      job_length,
+      location,
+      latitude,
+      longitude,
+      created_at,
+      user_id
+    `)
+    .eq("status", "OPEN")
+    .neq("user_id", user.profileId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error) {
     throw new Error(`Failed to get matching jobs: ${error.message}`);
@@ -184,12 +202,26 @@ export async function getJobApplications(
 
   const client = createUserClient(user.sessionToken);
 
+  // Use explicit foreign key hints to avoid ambiguous relationship errors
   const { data: applications, error } = await client
     .from("job_applications")
     .select(`
-      *,
-      profile:profiles(id, full_name, email, profile_image_url),
-      tradesperson_profile:tradesperson_profiles(*)
+      id,
+      job_id,
+      profile_id,
+      tradesperson_profile_id,
+      poster_id,
+      estimated_cost,
+      message,
+      status,
+      viewed_at,
+      is_timeline_acceptable,
+      additional_notes,
+      start_date,
+      created_at,
+      updated_at,
+      applicant:profiles!job_applications_profile_id_fkey(id, full_name, profile_image_url),
+      tradesperson_profile:tradesperson_profiles!job_applications_tradesperson_profile_id_fkey(id, trade_categories, experience_years, hourly_rate)
     `)
     .eq("job_id", jobId);
 

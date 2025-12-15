@@ -43,6 +43,7 @@ export const TestApplicationSchema = z.object({
   id: z.string().uuid(),
   jobId: z.string().uuid(),
   applicantId: z.string().uuid(), // TestUser id (tradesperson)
+  tradespersonProfileId: z.string().uuid().optional(), // tradesperson_profile_id for making offers
   status: z.enum(["IP", "C", "UR", "S", "V", "A"]),
   estimatedCost: z.number(),
   createdAt: z.date(),

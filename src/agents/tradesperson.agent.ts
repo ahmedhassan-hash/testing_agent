@@ -79,20 +79,39 @@ export async function tradespersonAgent(
       case "apply_to_job": {
         const applyParams = params?.apply_to_job;
 
-        // Get job to apply to - either specified or first job in state
+        // Get job to apply to - either specified, from state, or query database
         let jobId = applyParams?.jobId;
         let jobBudget = 200;
 
+        // First try jobs in state
         if (!jobId && state.jobs.length > 0) {
-          const openJobs = state.jobs.filter((j) => j.status === "OPEN");
+          const appliedJobIds = new Set(
+            state.applications
+              .filter(a => a.applicantId === tradesperson.id)
+              .map(a => a.jobId)
+          );
+          const openJobs = state.jobs.filter(
+            (j) => j.status === "OPEN" && !appliedJobIds.has(j.id) && j.createdBy !== tradesperson.id
+          );
           if (openJobs.length > 0) {
             jobId = openJobs[0].id;
             jobBudget = openJobs[0].budget;
           }
         }
 
+        // If still no job, query the database for available jobs
         if (!jobId) {
-          throw new Error("No job ID provided and no open jobs in state");
+          const dbJobs = await tools.getMatchingJobs(tradesperson, 10);
+          if (dbJobs.length > 0) {
+            // Pick a random job from the results to add variety
+            const randomJob = dbJobs[Math.floor(Math.random() * dbJobs.length)];
+            jobId = randomJob.id;
+            jobBudget = randomJob.budget || 200;
+          }
+        }
+
+        if (!jobId) {
+          throw new Error("No jobs available to apply to");
         }
 
         const application = await tools.applyToJob(tradesperson, jobId, {

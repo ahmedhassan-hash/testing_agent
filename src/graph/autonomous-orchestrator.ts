@@ -2,7 +2,7 @@ import { END, START, StateGraph } from "@langchain/langgraph";
 import chalk from "chalk";
 import type { TestAgentState, TestUser, UserRole } from "../state/types.js";
 import { createInitialState } from "../state/types.js";
-import { createTestUser, deleteTestUser } from "../tools/auth.tools.js";
+import { createTestUser } from "../tools/auth.tools.js";
 import {
   decideNextAction,
   executeAction,
@@ -274,21 +274,15 @@ async function autonomousLoop(state: AutonomousState): Promise<AutonomousState> 
 }
 
 /**
- * Node: Cleanup test data
+ * Node: Skip cleanup - keep all test data
  */
 async function cleanup(state: AutonomousState): Promise<AutonomousState> {
-  console.log(chalk.blue("\n🧹 Cleaning up test users..."));
-
-  for (const user of state.testUsers) {
-    try {
-      await deleteTestUser(user);
-      console.log(chalk.gray(`  ✓ Deleted ${user.email}`));
-    } catch (error) {
-      console.log(chalk.yellow(`  ⚠ Could not delete ${user.email}: ${error}`));
-    }
-  }
-
-  state.messages.push("Cleanup completed");
+  console.log(chalk.blue("\n📦 Keeping all test users and data (no cleanup)"));
+  console.log(chalk.gray(`  Users created: ${state.testUsers.length}`));
+  state.testUsers.forEach(u => {
+    console.log(chalk.gray(`    - ${u.fullName} (${u.email})`));
+  });
+  state.messages.push("Simulation completed - data preserved");
   return state;
 }
 

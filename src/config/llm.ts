@@ -24,7 +24,7 @@ export const llm = openRouterApiKey
   : null;
 
 // Free model from OpenRouter
-export const DEFAULT_MODEL = "amazon/nova-2-lite-v1:free";
+export const DEFAULT_MODEL = "openai/gpt-oss-120b:free";
 
 /**
  * Simple chat completion helper

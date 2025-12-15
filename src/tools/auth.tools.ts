@@ -2,10 +2,129 @@ import { v4 as uuidv4 } from "uuid";
 import config from "../config/index.js";
 import { supabaseAdmin, supabaseAnon } from "../config/supabase.js";
 import type { TestUser, UserRole } from "../state/types.js";
+import { chat } from "../config/llm.js";
+
+// Cache for generated identities to avoid duplicates
+const usedEmails = new Set<string>();
+const usedNames = new Set<string>();
+
+interface GeneratedIdentity {
+  fullName: string;
+  email: string;
+  businessName?: string;
+}
+
+/**
+ * Generate a realistic fake identity using LLM
+ */
+async function generateRealisticIdentity(role: UserRole): Promise<GeneratedIdentity> {
+  const uniqueSuffix = uuidv4().slice(0, 4);
+
+  try {
+    const prompt = `Generate a realistic Australian person's identity for a ${role} in a home services marketplace.
+
+Return ONLY valid JSON (no markdown):
+{
+  "firstName": "realistic first name",
+  "lastName": "realistic last name",
+  "emailPrefix": "email prefix based on name (lowercase, no spaces, can include dots or numbers)"${role === "business" ? `,
+  "businessName": "realistic Australian business name for a trade/home services company"` : ""}
+}
+
+Make it sound like a real person. Use common Australian names. The email should look professional.`;
+
+    const response = await chat(prompt, {
+      systemPrompt: "You generate realistic test data. Return only valid JSON, no explanations.",
+      temperature: 0.9,
+    });
+
+    const cleaned = response.replace(/```json\n?|\n?```/g, "").trim();
+    const data = JSON.parse(cleaned);
+
+    const fullName = `${data.firstName} ${data.lastName}`;
+    const email = `${data.emailPrefix}${uniqueSuffix}@gmail.com`;
+
+    // Check for duplicates
+    if (usedEmails.has(email) || usedNames.has(fullName)) {
+      throw new Error("Duplicate identity");
+    }
+
+    usedEmails.add(email);
+    usedNames.add(fullName);
+
+    return {
+      fullName,
+      email,
+      businessName: data.businessName,
+    };
+  } catch {
+    // Fallback to generated realistic-looking names (LLM unavailable or failed)
+    return generateFallbackIdentity(role, uniqueSuffix);
+  }
+}
+
+/**
+ * Fallback identity generator with realistic Australian names
+ */
+function generateFallbackIdentity(role: UserRole, uniqueSuffix: string): GeneratedIdentity {
+  const firstNames = [
+    "James", "Sarah", "Michael", "Emma", "David", "Jessica", "Daniel", "Sophie",
+    "Matthew", "Emily", "Andrew", "Olivia", "Joshua", "Charlotte", "Ryan", "Mia",
+    "Luke", "Chloe", "Jack", "Grace", "Thomas", "Hannah", "Benjamin", "Lily",
+    "William", "Zoe", "Ethan", "Ava", "Samuel", "Isabella", "Nathan", "Amelia",
+    "Chris", "Laura", "Steve", "Kate", "Mark", "Rachel", "Peter", "Michelle"
+  ];
+
+  const lastNames = [
+    "Smith", "Jones", "Williams", "Brown", "Wilson", "Taylor", "Anderson", "Thomas",
+    "Jackson", "White", "Harris", "Martin", "Thompson", "Garcia", "Martinez", "Robinson",
+    "Clark", "Rodriguez", "Lewis", "Lee", "Walker", "Hall", "Allen", "Young",
+    "King", "Wright", "Scott", "Green", "Baker", "Adams", "Nelson", "Carter",
+    "Mitchell", "Roberts", "Turner", "Phillips", "Campbell", "Parker", "Evans", "Edwards"
+  ];
+
+  const businessPrefixes = [
+    "Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", "Gold Coast", "Newcastle",
+    "Central", "Metro", "Coastal", "Urban", "Premier", "Elite", "Pro", "Expert"
+  ];
+
+  const businessTypes = [
+    "Plumbing", "Electrical", "Building", "Maintenance", "Renovations", "Construction",
+    "Home Services", "Property Services", "Trade Services", "Repairs"
+  ];
+
+  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const fullName = `${firstName} ${lastName}`;
+
+  // Generate email variations
+  const emailStyles = [
+    `${firstName.toLowerCase()}.${lastName.toLowerCase()}`,
+    `${firstName.toLowerCase()}${lastName.toLowerCase()}`,
+    `${firstName.toLowerCase()}_${lastName.toLowerCase()}`,
+    `${firstName.toLowerCase()[0]}${lastName.toLowerCase()}`,
+  ];
+  const emailPrefix = emailStyles[Math.floor(Math.random() * emailStyles.length)];
+  const email = `${emailPrefix}${uniqueSuffix}@gmail.com`;
+
+  let businessName: string | undefined;
+  if (role === "business") {
+    const prefix = businessPrefixes[Math.floor(Math.random() * businessPrefixes.length)];
+    const type = businessTypes[Math.floor(Math.random() * businessTypes.length)];
+    businessName = `${prefix} ${type} Pty Ltd`;
+  }
+
+  // Track to avoid duplicates
+  usedEmails.add(email);
+  usedNames.add(fullName);
+
+  return { fullName, email, businessName };
+}
 
 interface CreateUserParams {
   role: UserRole;
   fullName?: string;
+  email?: string;
   location?: {
     display_name: string;
     lat: number;
@@ -19,12 +138,15 @@ interface CreateUserParams {
 export async function createTestUser(
   params: CreateUserParams
 ): Promise<TestUser> {
-  const { role, fullName, location, tradeCategories, businessName } = params;
+  const { role, location, tradeCategories } = params;
 
-  const uniqueId = uuidv4().slice(0, 8);
-  const email = `${config.testUserPrefix}${role}_${uniqueId}@${config.testEmailDomain}`;
+  // Generate realistic identity
+  const identity = await generateRealisticIdentity(role);
+
+  const email = params.email || identity.email;
   const password = config.defaultPassword;
-  const name = fullName || `Test ${role} ${uniqueId}`;
+  const name = params.fullName || identity.fullName;
+  const businessName = params.businessName || identity.businessName;
 
   const testLocation =
     location ||
@@ -54,7 +176,7 @@ export async function createTestUser(
     user_id: userId,
     role,
     full_name: name,
-    phone_number: `+6140000${uniqueId.slice(0, 4)}`,
+    phone_number: `+614${Math.floor(Math.random() * 90000000) + 10000000}`,
     address: testLocation.display_name,
     latitude: testLocation.lat,
     longitude: testLocation.lon,
@@ -109,7 +231,7 @@ export async function createTestUser(
   } else if (role === "business") {
     const businessData = {
       profile_id: profile.id,
-      business_name: businessName || `Test Business ${uniqueId}`,
+      business_name: businessName,
       abn_acn: `${Math.floor(Math.random() * 90000000000) + 10000000000}`,
       business_address: testLocation.display_name,
       business_type: "Trade Services",

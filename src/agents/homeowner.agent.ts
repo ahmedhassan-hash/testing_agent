@@ -103,6 +103,26 @@ export async function homeownerAgent(
         }
 
         const applications = await tools.getJobApplications(homeowner, jobId);
+
+        // Sync fetched applications to state so make_offer becomes available
+        for (const app of applications) {
+          const existingIndex = state.applications.findIndex(a => a.id === app.id);
+          const mappedApp = {
+            id: app.id,
+            jobId: app.job_id,
+            applicantId: app.profile_id,
+            tradespersonProfileId: app.tradesperson_profile_id,
+            status: app.status,
+            estimatedCost: app.estimated_cost,
+            createdAt: new Date(app.created_at),
+          };
+          if (existingIndex >= 0) {
+            state.applications[existingIndex] = mappedApp;
+          } else {
+            state.applications.push(mappedApp);
+          }
+        }
+
         state.messages.push(
           `Homeowner viewed ${applications.length} applications for job ${jobId}`
         );
